@@ -180,6 +180,182 @@ class hypervisor(object):
     def image_name(self):
         abstract()
 
+# Ukvm Hypervisor interface
+class ukvm(hypervisor):
+
+    def __init__(self, config):
+        super(ukvm, self).__init__(config)
+        self._proc = None
+        self._stopped = False
+        self._sudo = False
+        self._image_name = self._config if "image" in self._config else self.name() + " vm"
+
+        # Pretty printing
+        self.info = Logger(color.INFO("<" + type(self).__name__ + ">"))
+
+    def name(self):
+        return "Ukvm"
+
+    def image_name(self):
+        return self._image_name
+
+    def drive_arg(self, filename, drive_type = "virtio", drive_format = "raw", media_type = "disk"):
+        return ["-drive","file=" + filename
+                + ",format=" + drive_format
+                + ",if=" + drive_type
+                + ",media=" + media_type]
+
+    def mod_args(self, mods):
+        mods_list =",".join([mod["path"] + ((" " + mod["args"]) if "args" in mod else "")
+                             for mod in mods])
+        return ["-initrd", mods_list]
+
+    def net_arg(self, backend, device, if_name = "net0", mac = None, bridge = None):
+        qemu_ifup = INCLUDEOS_HOME + "/includeos/scripts/qemu-ifup"
+        qemu_ifdown = INCLUDEOS_HOME + "/includeos/scripts/qemu-ifdown"
+
+        # FIXME: this needs to get removed, e.g. fetched from the schema
+        names = {"virtio" : "virtio-net", "vmxnet" : "vmxnet3", "vmxnet3" : "vmxnet3"}
+
+        if device in names:
+            device = names[device]
+
+        # Network device - e.g. host side of nic
+        netdev = backend + ",id=" + if_name
+
+        if backend == "tap":
+            if self._kvm_present:
+                netdev += ",vhost=on"
+            netdev += ",script=" + qemu_ifup + ",downscript=" + qemu_ifdown
+
+        if bridge:
+            netdev = "bridge,id=" + if_name + ",br=" + bridge
+
+        # Device - e.g. guest side of nic
+        device += ",netdev=" + if_name
+
+        # Add mac-address if specified
+        if mac: device += ",mac=" + mac
+
+        return ["-device", device,
+                "-netdev", netdev]
+
+    def start_process(self, cmdlist):
+
+        if cmdlist[0] == "sudo": # and have_sudo():
+            print color.WARNING("Running with sudo")
+            self._sudo = True
+
+        # Start a subprocess
+        self._proc = subprocess.Popen(cmdlist,
+                                      stdout = subprocess.PIPE,
+                                      stderr = subprocess.PIPE,
+                                      stdin = subprocess.PIPE)
+        self.info("Started process PID ",self._proc.pid)
+
+        return self._proc
+
+    def get_final_output(self):
+        return self._proc.communicate()
+
+    def boot(self, multiboot, kernel_args = "", image_name = None):
+        self._stopped = False
+        print "config is "
+        print self._config
+
+        qkvm_bin = INCLUDEOS_HOME + "/includeos/x86_64/lib/ukvm-bin"
+        qkvm_interface_script =  INCLUDEOS_HOME + "/includeos/scripts/ukvm-ifup.sh"
+
+        subprocess.call(['touch', 'dummy.disk'])
+        subprocess.call(['chmod', '+x', qkvm_bin])
+        subprocess.call(['sudo', qkvm_interface_script])
+        print image_name
+
+        # Use provided image name if set, otherwise try to find it in json-config
+        if not image_name:
+            if not "image" in self._config:
+                raise Exception("No image name provided, neither as param or in config file")
+            image_name = self._config["image"]
+
+        self._image_name = image_name
+
+        disk_args = ["--disk=dummy.disk"]
+        net_args = ["--net=tap100"]
+        command = ["sudo", qkvm_bin]
+        command += disk_args
+        command += net_args
+        command += [self._image_name]
+        print ("Command:", " ".join(command))
+
+        try:
+            self.start_process(command)
+        except Exception as e:
+            raise e
+
+    def stop(self):
+
+        signal = "-SIGTERM"
+
+        # Don't try to kill twice
+        if self._stopped:
+            self.wait()
+            return self
+        else:
+            self._stopped = True
+
+        if self._proc and self._proc.poll() == None :
+
+            if not self._sudo:
+                info ("Stopping child process (no sudo required)")
+                self._proc.terminate()
+            else:
+                # Find and terminate all child processes, since parent is "sudo"
+                parent = psutil.Process(self._proc.pid)
+                children = parent.children()
+
+                info ("Stopping", self._image_name, "PID",self._proc.pid, "with", signal)
+
+                for child in children:
+                    info (" + child process ", child.pid)
+
+                    # The process might have gotten an exit status by now so check again to avoid negative exit
+                    if (not self._proc.poll()):
+                        subprocess.call(["sudo", "kill", signal, str(child.pid)])
+
+            # Wait for termination (avoids the need to reset the terminal etc.)
+            self.wait()
+
+        return self
+
+    def wait(self):
+        if (self._proc): self._proc.wait()
+        return self
+
+    def read_until_EOT(self):
+        chars = ""
+
+        while (not self._proc.poll()):
+            char = self._proc.stdout.read(1)
+            if char == chr(4):
+                return chars
+            chars += char
+
+        return chars
+
+
+    def readline(self):
+        if self._proc.poll():
+            raise Exception("Process completed")
+        return self._proc.stdout.readline()
+
+
+    def writeline(self, line):
+        if self._proc.poll():
+            raise Exception("Process completed")
+        return self._proc.stdin.write(line + "\n")
+
+    def poll(self):
+        return self._proc.poll()
 
 # Qemu Hypervisor interface
 class qemu(hypervisor):
@@ -482,7 +658,7 @@ class qemu(hypervisor):
 # VM class
 class vm:
 
-    def __init__(self, config = None, hyper = qemu):
+    def __init__(self, config = None, hyper_name = "qemu"):
 
         self._exit_status = None
         self._exit_msg = ""
@@ -496,6 +672,11 @@ class vm:
             panic_signature : self._on_panic,
             "SUCCESS" : self._on_success }
 
+        if hyper_name == "ukvm":
+            hyper = ukvm
+        else:
+            hyper = qemu
+
         # Initialize hypervisor with config
         assert(issubclass(hyper, hypervisor))
         self._hyper  = hyper(self._config)
@@ -505,6 +686,7 @@ class vm:
         self._on_exit = lambda : None
         self._root = os.getcwd()
         self._kvm_present = False
+        print hyper
 
     def stop(self):
         self._hyper.stop().wait()

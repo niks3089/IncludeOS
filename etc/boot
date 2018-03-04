@@ -150,7 +150,13 @@ if args.config:
     config = os.path.abspath(args.config)
     if VERB: print INFO, "Using config file", config
 
-vm = vmrunner.vm(config = config)
+hyper_name = "qemu"
+if "PLATFORM" in os.environ:
+    if os.environ['PLATFORM'] == "x86_solo5":
+        print "hypervisor is ukvm"
+        hyper_name = "ukvm"
+
+vm = vmrunner.vm(config = config, hyper_name = hyper_name)
 
 # Don't listen to events needed by testrunner
 vm.on_success(lambda(x): None, do_exit = False)
@@ -195,6 +201,7 @@ if (args.grub or args.grub_reuse):
 
 # Skip starting a VM if we are only building
 if (args.build): exit(0);
+
 
 if (not has_bootloader):
     vm.boot(timeout = None, multiboot = True, kernel_args = " ".join(args.vmargs), image_name = image_name)
