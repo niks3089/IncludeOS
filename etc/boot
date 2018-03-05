@@ -155,9 +155,13 @@ if args.config:
 
 hyper_name = "qemu"
 if args.solo5:
-    print "hypervisor is ukvm"
     hyper_name = "ukvm"
     os.environ['PLATFORM'] = "x86_solo5"
+    qkvm_bin = INCLUDEOS_PREFIX + "/includeos/x86_64/lib/ukvm-bin"
+
+    subprocess.call(['touch', 'dummy.disk'], shell=True)
+    subprocess.call(['chmod', '+x', qkvm_bin], shell=True)
+    subprocess.call(['sudo', INCLUDEOS_PREFIX + "/includeos/scripts/ukvm-ifup.sh" ], shell=True)
 
 vm = vmrunner.vm(config = config, hyper_name = hyper_name)
 
@@ -204,7 +208,6 @@ if (args.grub or args.grub_reuse):
 
 # Skip starting a VM if we are only building
 if (args.build): exit(0);
-
 
 if (not has_bootloader):
     vm.boot(timeout = None, multiboot = True, kernel_args = " ".join(args.vmargs), image_name = image_name)
