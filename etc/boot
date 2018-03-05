@@ -124,9 +124,9 @@ if args.solo5:
     os.environ['PLATFORM'] = "x86_solo5"
     qkvm_bin = INCLUDEOS_PREFIX + "/includeos/x86_64/lib/ukvm-bin"
 
-    subprocess.call(['touch', 'dummy.disk'], shell=True)
-    subprocess.call(['chmod', '+x', qkvm_bin], shell=True)
-    subprocess.call(['sudo', INCLUDEOS_PREFIX + "/includeos/scripts/ukvm-ifup.sh" ], shell=True)
+    subprocess.call(['touch', 'dummy.disk'])
+    subprocess.call(['chmod', '+x', qkvm_bin])
+    subprocess.call(['sudo', INCLUDEOS_PREFIX + "/includeos/scripts/ukvm-ifup.sh" ])
 
 vm = vmrunner.vm(config = config, hyper_name = hyper_name)
 
