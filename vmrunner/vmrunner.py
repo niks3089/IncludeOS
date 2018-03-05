@@ -216,7 +216,7 @@ class ukvm(hypervisor):
         return self._image_name
 
     def drive_arg(self):
-        return ["--disk=dummy.disk"]
+        return ["--disk=" + INCLUDEOS_HOME + "dummy.disk"]
 
     def net_arg(self):
         return ["--net=tap100"]
