@@ -626,7 +626,6 @@ class vm:
         self._on_exit = lambda : None
         self._root = os.getcwd()
         self._kvm_present = False
-        print hyper_name, hyper
 
     def stop(self):
         self._hyper.stop().wait()
