@@ -64,6 +64,9 @@ parser.add_argument("-j", "--config", dest="config", type = str, metavar = "PATH
 parser.add_argument('vm_location', action="store", type = str, default=".",
                     help="Location of the IncludeOS service binary, image or source")
 
+parser.add_argument("--with-solo5", dest="solo5", action="store_true",
+                    help="Run includeOS on solo5 kernel with ukvm-bin as monitor")
+
 parser.add_argument('vmargs', nargs='*', help="Arguments to pass on to the VM start / main")
 
 args = parser.parse_args()
@@ -151,10 +154,10 @@ if args.config:
     if VERB: print INFO, "Using config file", config
 
 hyper_name = "qemu"
-if "PLATFORM" in os.environ:
-    if os.environ['PLATFORM'] == "x86_solo5":
-        print "hypervisor is ukvm"
-        hyper_name = "ukvm"
+if args.solo5:
+    print "hypervisor is ukvm"
+    hyper_name = "ukvm"
+    os.environ['PLATFORM'] = "x86_solo5"
 
 vm = vmrunner.vm(config = config, hyper_name = hyper_name)
 
