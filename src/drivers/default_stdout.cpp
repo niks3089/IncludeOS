@@ -1,7 +1,7 @@
-// -*-C++-*-
 // This file is a part of the IncludeOS unikernel - www.includeos.org
 //
-// Copyright 2017 IncludeOS AS, Oslo, Norway
+// Copyright 2015 Oslo and Akershus University College of Applied Sciences
+// and Alfred Bratterud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,19 +15,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <kernel/memory.hpp>
-#include <info>
-
-void __arch_init_paging()
-{
-  INFO("Kernel", "Paging disabled by driver");
-}
-
-namespace os {
-namespace mem {
-  Map map(Map, const char*) {
-    return {};
-  }
-  template <>
-  const size_t Mapping<os::mem::Access>::any_size = 4096;
-}}
+// add OS default stdout handler
+bool os_default_stdout = true;

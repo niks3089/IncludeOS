@@ -37,6 +37,8 @@
 #include <statman>
 #include <config>
 #include "log.hpp"
+#include <system_log>
+#include <isotime>
 
 namespace uplink {
   constexpr std::chrono::seconds WS_uplink::heartbeat_interval;
@@ -62,6 +64,8 @@ namespace uplink {
     liu::LiveUpdate::register_partition("uplink", {this, &WS_uplink::store});
 
     CHECK(config_.reboot, "Reboot on panic");
+    if(config_.reboot)
+      OS::set_panic_action(OS::Panic_action::reboot);
 
     CHECK(config_.serialize_ct, "Serialize Conntrack");
     if(config_.serialize_ct)
@@ -124,7 +128,7 @@ namespace uplink {
 
     //static const std::string auth_data{"{ \"id\": \"testor\", \"key\": \"kappa123\"}"};
 
-    MYINFO("Sending auth request to %s", url.c_str());
+    MYINFO("[ %s ] Sending auth request to %s", isotime::now().c_str(), url.c_str());
 
     client_->post(http::URI{url},
       { {"Content-Type", "application/json"} },
@@ -137,21 +141,21 @@ namespace uplink {
   {
     if(err)
     {
-      MYINFO("Auth failed - %s", err.to_string().c_str());
+      MYINFO("[ %s ] Auth failed - %s", isotime::now().c_str(), err.to_string().c_str());
       retry_auth();
       return;
     }
 
     if(res->status_code() != http::OK)
     {
-      MYINFO("Auth failed - %s", res->to_string().c_str());
+      MYINFO("[ %s ] Auth failed - %s", isotime::now().c_str(), res->to_string().c_str());
       retry_auth();
       return;
     }
 
     retry_backoff = 0;
 
-    MYINFO("Auth success (token received)");
+    MYINFO("[ %s ] Auth success (token received)", isotime::now().c_str());
     token_ = std::string(res->body());
 
     dock();
@@ -175,7 +179,7 @@ namespace uplink {
     std::string url{"ws://"};
     url.append(config_.url).append("/dock");
 
-    MYINFO("Dock attempt to %s", url.c_str());
+    MYINFO("[ %s ] Dock attempt to %s", isotime::now().c_str(), url.c_str());
 
     net::WebSocket::connect(*client_, http::URI{url}, {this, &WS_uplink::establish_ws});
   }
@@ -183,7 +187,7 @@ namespace uplink {
   void WS_uplink::establish_ws(net::WebSocket_ptr ws)
   {
     if(ws == nullptr) {
-      MYINFO("Failed to establish websocket");
+      MYINFO("[ %s ] Failed to establish websocket", isotime::now().c_str());
       retry_auth();
       return;
     }
@@ -198,7 +202,7 @@ namespace uplink {
 
     flush_log();
 
-    MYINFO("Websocket established");
+    MYINFO("[ %s ] Websocket established", isotime::now().c_str());
 
     send_ident();
 
@@ -210,6 +214,14 @@ namespace uplink {
     heart_retries_left = heartbeat_retries;
     last_ping = RTC::now();
     heartbeat_timer.start(std::chrono::seconds(10));
+
+    if(SystemLog::get_flags() & SystemLog::PANIC)
+    {
+      MYINFO("[ %s ] Found panic in system log", isotime::now().c_str());
+      auto log = SystemLog::copy();
+      SystemLog::clear_flags();
+      send_message(Transport_code::PANIC, log.data(), log.size());
+    }
   }
 
   void WS_uplink::handle_ws_close(uint16_t code)
@@ -227,14 +239,14 @@ namespace uplink {
   void WS_uplink::handle_pong_timeout(net::WebSocket&)
   {
     heart_retries_left--;
-    MYINFO("! Pong timeout. Retries left %i", heart_retries_left);
+    MYINFO("[ %s ] ! Pong timeout. Retries left %i", isotime::now().c_str(), heart_retries_left);
   }
 
   void WS_uplink::on_heartbeat_timer()
   {
 
     if (not is_online()) {
-      MYINFO("Can't heartbeat on closed conection. ");
+      MYINFO("Can't heartbeat on closed connection.");
       return;
     }
 
@@ -267,7 +279,7 @@ namespace uplink {
       parser_.parse(msg->data(), msg->size());
     }
     else {
-      MYINFO("Malformed WS message, try to re-establish");
+      MYINFO("[ %s ] Malformed WS message, try to re-establish", isotime::now().c_str());
       send_error("WebSocket error");
       ws_->close();
       ws_ = nullptr;
@@ -279,7 +291,7 @@ namespace uplink {
   {
     if(UNLIKELY(t == nullptr))
     {
-      MYINFO("Something went terribly wrong...");
+      MYINFO("[ %s ] Something went terribly wrong...", isotime::now().c_str());
       return;
     }
 
@@ -288,7 +300,7 @@ namespace uplink {
     {
       case Transport_code::UPDATE:
       {
-        MYINFO("Update received - commencing update...");
+        MYINFO("[ %s ] Update received - commencing update...", isotime::now().c_str());
 
         update({t->begin(), t->end()});
         return;
@@ -373,7 +385,7 @@ namespace uplink {
 
   void WS_uplink::send_ident()
   {
-    MYINFO("Sending ident");
+    MYINFO("[ %s ] Sending ident", isotime::now().c_str());
     using namespace rapidjson;
 
     StringBuffer buf;
@@ -396,6 +408,12 @@ namespace uplink {
     {
       writer.Key("binary");
       writer.String(binary_hash_);
+    }
+
+    if(not tag_.empty())
+    {
+      writer.Key("tag");
+      writer.String(tag_);
     }
 
     if(update_time_taken > 0)
@@ -451,7 +469,7 @@ namespace uplink {
   }
 
   void WS_uplink::send_uplink() {
-    MYINFO("Sending uplink");
+    MYINFO("[ %s ] Sending uplink", isotime::now().c_str());
     using namespace rapidjson;
 
     StringBuffer buf;
@@ -523,16 +541,6 @@ namespace uplink {
       logbuf_.clear();
       logbuf_.shrink_to_fit();
     }
-  }
-
-  void WS_uplink::panic(const char* why){
-    MYINFO("WS_uplink sending panic\n");
-    Log::get().flush();
-    send_message(Transport_code::PANIC, why, strlen(why));
-    ws_->close();
-    inet_.nic().flush();
-
-    if(config_.reboot) OS::reboot();
   }
 
   void WS_uplink::send_stats()
