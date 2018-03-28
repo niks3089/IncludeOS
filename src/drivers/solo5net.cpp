@@ -102,7 +102,7 @@ net::Packet_ptr Solo5Net::recv_packet()
   new (pckt) net::Packet(0, MTU(), packet_len(), buffer.bufstore);
   // Populate the packet buffer with new packet, if any
   int size = packet_len();
-  size_t len;
+  size_t len = 0;
   while (solo5_net_read(pckt->buf(), size, &len) == SOLO5_R_AGAIN) {
     solo5_yield(solo5_clock_monotonic() + NSEC_PER_SEC);
   }
