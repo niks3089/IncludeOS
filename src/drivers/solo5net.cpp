@@ -33,18 +33,34 @@ using namespace net;
 
 const char* Solo5Net::driver_name() const { return "Solo5Net"; }
 
+static void tohexs(char *dst, uint8_t *src, size_t size)
+{
+    while (size--) {
+        uint8_t n = *src >> 4;
+        *dst++ = (n < 10) ? (n + '0') : (n - 10 + 'a');
+        n = *src & 0xf;
+        *dst++ = (n < 10) ? (n + '0') : (n - 10 + 'a');
+        src++;
+    }
+    *dst = '\0';
+}
+
 Solo5Net::Solo5Net()
   : Link(Link_protocol{{this, &Solo5Net::transmit}, mac()}, bufstore_),
     packets_rx_{Statman::get().create(Stat::UINT64, device_name() + ".packets_rx").get_uint64()},
     packets_tx_{Statman::get().create(Stat::UINT64, device_name() + ".packets_tx").get_uint64()},
     bufstore_{NUM_BUFFERS, 2048u} // don't change this
 {
-  char macaddr[6];
+  uint8_t macaddr[6];
   INFO("Solo5Net", "Driver initializing");
+
   struct solo5_net_info ni;
   solo5_net_info(&ni);
   memcpy(macaddr, ni.mac_address, sizeof macaddr);
-  mac_addr = MAC::Addr(macaddr);
+  char macaddr_s[(sizeof macaddr * 2) + 1];
+  tohexs(macaddr_s, macaddr, sizeof macaddr);
+
+  mac_addr = MAC::Addr(macaddr_s);
 }
 
 void Solo5Net::transmit(net::Packet_ptr pckt)
@@ -77,6 +93,8 @@ net::Packet_ptr Solo5Net::create_packet(int link_offset)
   new (pckt) net::Packet(link_offset, 0, packet_len(), buffer.bufstore);
   return net::Packet_ptr(pckt);
 }
+
+static const solo5_time_t NSEC_PER_SEC = 1000000000ULL;
 net::Packet_ptr Solo5Net::recv_packet()
 {
   auto buffer = bufstore().get_buffer();
@@ -85,12 +103,14 @@ net::Packet_ptr Solo5Net::recv_packet()
   // Populate the packet buffer with new packet, if any
   int size = packet_len();
   size_t len;
-  if (solo5_net_read(pckt->buf(), size, &len) == SOLO5_R_OK) {
-    // Adjust packet size to match received data
-    if (len) {
-      pckt->set_data_end(len);
-      return net::Packet_ptr(pckt);
-    }
+  while (solo5_net_read(pckt->buf(), size, &len) == SOLO5_R_AGAIN) {
+    solo5_yield(solo5_clock_monotonic() + NSEC_PER_SEC);
+  }
+  // Adjust packet size to match received data
+  if (len) {
+    //INFO("Solo5Net", "Received pkt of len: %u", len);
+    pckt->set_data_end(len);
+    return net::Packet_ptr(pckt);
   }
   bufstore().release(buffer.addr);
   return nullptr;
