@@ -16,11 +16,11 @@ extern "C" {
 Solo5Blk::Solo5Blk()
   : hw::Block_device()
 {
-  INFO("Solo5Blk", "Block device with %llu sectors", solo5_blk_sectors());
+  INFO("Solo5Blk", "Block device with %llu sectors", 0); 
 }
 
 Solo5Blk::block_t Solo5Blk::size() const noexcept {
-  return solo5_blk_sectors();
+  return 0;//solo5_blk_sectors();
 }
 
 Solo5Blk::buffer_t Solo5Blk::read_sync(block_t blk)
@@ -28,7 +28,7 @@ Solo5Blk::buffer_t Solo5Blk::read_sync(block_t blk)
   auto buffer = fs::construct_buffer(block_size());
   int rlen = SECTOR_SIZE;
 
-  solo5_blk_read_sync((uint64_t) blk, buffer->data(), &rlen);
+  //solo5_blk_read_sync((uint64_t) blk, buffer->data(), &rlen);
   return buffer;
 }
 
@@ -36,7 +36,7 @@ Solo5Blk::buffer_t Solo5Blk::read_sync(block_t blk, size_t count) {
   auto buffer = fs::construct_buffer(block_size() * count);
   int rlen = SECTOR_SIZE * count;
 
-  solo5_blk_read_sync((uint64_t) blk, buffer->data(), &rlen);
+  //solo5_blk_read_sync((uint64_t) blk, buffer->data(), &rlen);
   return buffer;
 }
 
