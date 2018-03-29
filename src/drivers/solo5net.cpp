@@ -94,7 +94,6 @@ net::Packet_ptr Solo5Net::create_packet(int link_offset)
   return net::Packet_ptr(pckt);
 }
 
-static const solo5_time_t NSEC_PER_SEC = 1000000000ULL;
 net::Packet_ptr Solo5Net::recv_packet()
 {
   auto buffer = bufstore().get_buffer();
@@ -103,14 +102,13 @@ net::Packet_ptr Solo5Net::recv_packet()
   // Populate the packet buffer with new packet, if any
   int size = packet_len();
   size_t len = 0;
-  while (solo5_net_read(pckt->buf(), size, &len) == SOLO5_R_AGAIN) {
-    solo5_yield(solo5_clock_monotonic() + NSEC_PER_SEC);
-  }
-  // Adjust packet size to match received data
-  if (len) {
-    //INFO("Solo5Net", "Received pkt of len: %u", len);
-    pckt->set_data_end(len);
-    return net::Packet_ptr(pckt);
+  if (solo5_net_read(pckt->buf(), size, &len) == SOLO5_R_OK) {
+      // Adjust packet size to match received data
+      if (len) {
+        //INFO("Solo5Net", "Received pkt of len: %u", len);
+        pckt->set_data_end(len);
+        return net::Packet_ptr(pckt);
+      }
   }
   bufstore().release(buffer.addr);
   return nullptr;
@@ -119,9 +117,9 @@ net::Packet_ptr Solo5Net::recv_packet()
 void Solo5Net::poll()
 {
   auto pckt_ptr = recv_packet();
-
-  if (LIKELY(pckt_ptr != nullptr)) {
+  while (pckt_ptr != nullptr) {
     Link::receive(std::move(pckt_ptr));
+    pckt_ptr = recv_packet();
   }
 }
 
