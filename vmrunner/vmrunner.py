@@ -221,6 +221,9 @@ class ukvm(hypervisor):
     def net_arg(self):
         return ["--net=tap100"]
 
+    def shm_arg(self):
+        return ["--shm=event"]
+
     def get_final_output(self):
         return self._proc.communicate()
 
@@ -238,7 +241,9 @@ class ukvm(hypervisor):
         command = ["sudo", qkvm_bin]
         command += self.drive_arg()
         command += self.net_arg()
+        command += self.shm_arg()
         command += [self._image_name]
+        command += [kernel_args]
 
         try:
             self.start_process(command)
