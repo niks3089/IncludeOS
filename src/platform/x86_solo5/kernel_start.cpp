@@ -62,10 +62,10 @@ extern "C" {
     OS::event_loop();
   }
 
-  int solo5_app_main(const struct solo5_start_info *si __attribute__((unused)))
+  int solo5_app_main(const struct solo5_start_info *si)
   {
      // cmdline is stored at 0x6000 by ukvm which is used by includeos. Move it fast.
-     //strncpy(cmdline, _cmdline, 256);
+     strncpy(cmdline, si->cmdline, 256);
 
      // solo5 sets the stack to be at the end of memory, so let's use that as
      // our memory size (before we change).
