@@ -46,16 +46,23 @@ function build_service() {
   str=">>> Now making $BASE"
   printf "%-50s " "* $BASE"
   git submodule update --init --recursive
+  if [ -e prereq.sh ]
+  then
+    ./prereq.sh
+  fi
   $INCLUDEOS_PREFIX/bin/boot -cb . &> $tmpfile
   echo "[ PASS ]"
 }
+
+export -f build_service
 
 for dir in `ls -d $script_absolute_dir/../../../examples/*`
 do
   if [[ $dir == *"$skip_tests"* ]]; then
 	  continue
   fi
-  build_service "$dir"
+  # build_service "$dir"
+  parallel build_service ::: "$dir"
 done
 
 echo "Done"
