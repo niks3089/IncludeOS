@@ -55,7 +55,7 @@ Solo5Net::Solo5Net()
   INFO("Solo5Net", "Driver initializing");
 
   struct solo5_net_info ni;
-  solo5_net_info(&ni);
+  solo5_net_info(0, &ni);
   memcpy(macaddr, ni.mac_address, sizeof macaddr);
   char macaddr_s[(sizeof macaddr * 2) + 1];
   tohexs(macaddr_s, macaddr, sizeof macaddr);
@@ -72,7 +72,7 @@ void Solo5Net::transmit(net::Packet_ptr pckt)
     // next in line
     auto next = tail->detach_tail();
     // write data to network
-    solo5_net_write(tail->buf(), tail->size());
+    solo5_net_write(0, tail->buf(), tail->size());
     // set tail to next, releasing tail
     tail = std::move(next);
     // Stat increase packets transmitted
@@ -102,7 +102,7 @@ net::Packet_ptr Solo5Net::recv_packet()
   // Populate the packet buffer with new packet, if any
   int size = packet_len();
   size_t len = 0;
-  if (solo5_net_read(pckt->buf(), size, &len) == SOLO5_R_OK) {
+  if (solo5_net_read(0, pckt->buf(), size, &len) == SOLO5_R_OK) {
       // Adjust packet size to match received data
       if (len) {
         //INFO("Solo5Net", "Received pkt of len: %u", len);

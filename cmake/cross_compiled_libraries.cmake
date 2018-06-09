@@ -33,7 +33,7 @@ ExternalProject_Add(solo5_repo
 	PREFIX precompiled
 	BUILD_IN_SOURCE 1
 	GIT_REPOSITORY https://github.com/niks3089/solo5.git
-	GIT_TAG shm_event
+	GIT_TAG kernel_bypass
 	CONFIGURE_COMMAND CC=gcc ./configure.sh
 	UPDATE_COMMAND ""
 	BUILD_COMMAND make

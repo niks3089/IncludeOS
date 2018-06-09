@@ -219,7 +219,7 @@ class ukvm(hypervisor):
         return ["--disk=" + INCLUDEOS_HOME + "dummy.disk"]
 
     def net_arg(self):
-        return ["--net=tap100"]
+        return ["--nic=1"]
 
     def shm_arg(self):
         return ["--shm=event"]
