@@ -56,13 +56,12 @@ static SSL_CTX* init_ssl_context(const std::string& certs_path, bool verify)
   auto ents = disk.fs().ls(certs_path);
 
   int files = 0;
-  MYINFO("Scanning files...");
   for(auto& ent : ents) {
     if(not ent.is_file())
       continue;
-    INFO2("%s", ent.name().c_str());
     files++;
   }
+  INFO2("%d certificates", files);
 
   Expects(files > 0 && "No files found on disk");
 
@@ -77,7 +76,7 @@ namespace uplink {
   WS_uplink::WS_uplink(Config config)
     : config_{std::move(config)},
       inet_{*config_.inet},
-      id_{inet_.link_addr().to_string()},
+      id_{__arch_system_info().uuid},
       parser_({this, &WS_uplink::handle_transport}),
       heartbeat_timer({this, &WS_uplink::on_heartbeat_timer})
   {

@@ -15,10 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define PRINT_INFO
-#define DEBUG // Allow debuging
-#define DEBUG2
-
 #include "solo5net.hpp"
 #include <net/packet.hpp>
 #include <hw/pci.hpp>
@@ -46,7 +42,7 @@ static void tohexs(char *dst, uint8_t *src, size_t size)
 }
 
 Solo5Net::Solo5Net()
-  : Link(Link_protocol{{this, &Solo5Net::transmit}, mac()}, bufstore_),
+  : Link(Link_protocol{{this, &Solo5Net::transmit}, mac()}),
     packets_rx_{Statman::get().create(Stat::UINT64, device_name() + ".packets_rx").get_uint64()},
     packets_tx_{Statman::get().create(Stat::UINT64, device_name() + ".packets_tx").get_uint64()},
     bufstore_{NUM_BUFFERS, 2048u} // don't change this
