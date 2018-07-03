@@ -631,8 +631,6 @@ class vm:
         self._exit_complete = False
 
         self._config = load_with_default_config(True, config, hyper_name)
-        print "myconfig is"
-        print self._config
         self._on_success = lambda(line) : self.exit(exit_codes["SUCCESS"], nametag + " All tests passed")
         self._on_panic =  self.panic
         self._on_timeout = self.timeout
@@ -943,13 +941,9 @@ def load_with_default_config(use_default, path = default_json, hyper_name="qemu"
     if use_default == True:
         info("Loading default config.")
         conf = load_config(default_config, hyper_name)
-        print "Default config"
-        print conf
 
     # load user config (or fallback)
     user_conf = load_config(path, hyper_name)
-    print "User conff"
-    print user_conf
 
     if user_conf:
         if use_default == False:
@@ -1007,10 +1001,7 @@ def load_config(path, hyper_name="qemu"):
 
     info('"',description,'"')
 
-    print "loading config.."
-    print config
     if config.has_key(hyper_name):
-        print config[hyper_name]
         return config[hyper_name]
 
     return config
