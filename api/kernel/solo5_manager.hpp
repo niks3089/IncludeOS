@@ -27,7 +27,7 @@ public:
   using Nic_ptr = std::unique_ptr<hw::Nic>;
   using Blk_ptr = std::unique_ptr<hw::Block_device>;
 
-  static void register_net(delegate<Nic_ptr()>);
+  static void register_net(delegate<Nic_ptr(uint8_t)>);
   static void register_blk(delegate<Blk_ptr()>);
 
   static void init();

@@ -36,9 +36,9 @@ public:
   using Link          = net::Link_layer<net::Ethernet>;
   using Link_protocol = Link::Protocol;
 
-  static std::unique_ptr<Nic> new_instance()
+  static std::unique_ptr<Nic> new_instance(uint8_t nic_index)
   {
-    return std::make_unique<Solo5Net>();
+    return std::make_unique<Solo5Net>(nic_index);
   }
 
   /** Human readable name. */
@@ -62,8 +62,8 @@ public:
   /** Linklayer input. Hooks into IP-stack bottom, w.DOWNSTREAM data.*/
   void transmit(net::Packet_ptr pckt);
 
-  /** Constructor. @param pcidev an initialized PCI device. */
-  Solo5Net();
+  /** Constructor. @param nic index to this driver */
+  Solo5Net(uint8_t nic_index);
 
   /** Space available in the transmit queue, in packets */
   size_t transmit_queue_available() override {
@@ -83,6 +83,7 @@ public:
   void poll() override;
 
 private:
+  uint8_t   nic_index_;
   MAC::Addr mac_addr;
   std::unique_ptr<net::Packet> recv_packet();
   /** Stats */

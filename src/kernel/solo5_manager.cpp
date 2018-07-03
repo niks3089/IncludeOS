@@ -28,10 +28,10 @@ using namespace hw;
 using Nic_ptr = std::unique_ptr<hw::Nic>;
 using Blk_ptr = std::unique_ptr<hw::Block_device>;
 
-Fixed_vector<delegate<Nic_ptr()>, ELEMENTS> nics(Fixedvector_Init::UNINIT);
+Fixed_vector<delegate<Nic_ptr(uint8_t)>, ELEMENTS> nics(Fixedvector_Init::UNINIT);
 Fixed_vector<delegate<Blk_ptr()>, ELEMENTS> blks(Fixedvector_Init::UNINIT);
 
-void Solo5_manager::register_net(delegate<Nic_ptr()> func)
+void Solo5_manager::register_net(delegate<Nic_ptr(uint8_t)> func)
 {
   nics.push_back(func);
 }
@@ -42,9 +42,10 @@ void Solo5_manager::register_blk(delegate<Blk_ptr()> func)
 
 void Solo5_manager::init() {
   INFO("Solo5", "Looking for solo5 devices");
+  int nic_index = 0;
 
   for (auto nic : nics)
-    hw::Devices::register_device<hw::Nic> (nic());
+    hw::Devices::register_device<hw::Nic> (nic(nic_index++));
   for (auto blk : blks)
     hw::Devices::register_device<hw::Block_device> (blk());
 }

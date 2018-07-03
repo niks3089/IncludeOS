@@ -1,6 +1,15 @@
 {
-  "description" : "Single virtio nic with vanilla cpu features",
-  "net" : [
-    {"device" : "virtio", "backend" : "tap" }
-  ]
+  "qemu" : {
+      "description" : "Single virtio nic with vanilla cpu features",
+      "net" : [
+        {"device" : "virtio", "backend" : "tap" }
+      ]
+  },
+
+  "ukvm" : {
+      "description" : "Single ukvm/solo5 nic",
+      "net" : [
+          {"nics" : 1 }
+      ]
+  }
 }

@@ -41,8 +41,8 @@ static void tohexs(char *dst, uint8_t *src, size_t size)
     *dst = '\0';
 }
 
-Solo5Net::Solo5Net()
-  : Link(Link_protocol{{this, &Solo5Net::transmit}, mac()}),
+Solo5Net::Solo5Net(uint8_t nic_index)
+  : nic_index_(nic_index), Link(Link_protocol{{this, &Solo5Net::transmit}, mac()}),
     packets_rx_{Statman::get().create(Stat::UINT64, device_name() + ".packets_rx").get_uint64()},
     packets_tx_{Statman::get().create(Stat::UINT64, device_name() + ".packets_tx").get_uint64()},
     bufstore_{NUM_BUFFERS, 2048u} // don't change this
@@ -68,7 +68,7 @@ void Solo5Net::transmit(net::Packet_ptr pckt)
     // next in line
     auto next = tail->detach_tail();
     // write data to network
-    solo5_net_write(0, tail->buf(), tail->size());
+    solo5_net_write(nic_index_, tail->buf(), tail->size());
     // set tail to next, releasing tail
     tail = std::move(next);
     // Stat increase packets transmitted
@@ -98,7 +98,7 @@ net::Packet_ptr Solo5Net::recv_packet()
   // Populate the packet buffer with new packet, if any
   int size = packet_len();
   size_t len = 0;
-  if (solo5_net_read(0, pckt->buf(), size, &len) == SOLO5_R_OK) {
+  if (solo5_net_read(nic_index_, pckt->buf(), size, &len) == SOLO5_R_OK) {
       // Adjust packet size to match received data
       if (len) {
         //INFO("Solo5Net", "Received pkt of len: %u", len);
