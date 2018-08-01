@@ -51,12 +51,9 @@ Solo5Net::Solo5Net(uint8_t nic_index)
   INFO("Solo5Net", "Driver initializing");
 
   struct solo5_net_info ni;
-  solo5_net_info(0, &ni);
-  memcpy(macaddr, ni.mac_address, sizeof macaddr);
-  char macaddr_s[(sizeof macaddr * 2) + 1];
-  tohexs(macaddr_s, macaddr, sizeof macaddr);
-
-  mac_addr = MAC::Addr(macaddr_s);
+  solo5_net_info(nic_index, &ni);
+  mac_addr = MAC::Addr(ni.mac_address[0], ni.mac_address[1], ni.mac_address[2],
+                       ni.mac_address[3], ni.mac_address[4], ni.mac_address[5]);
 }
 
 void Solo5Net::transmit(net::Packet_ptr pckt)
@@ -96,15 +93,13 @@ net::Packet_ptr Solo5Net::recv_packet()
   auto* pckt = (net::Packet*) buffer.addr;
   new (pckt) net::Packet(0, MTU(), packet_len(), buffer.bufstore);
   // Populate the packet buffer with new packet, if any
-  int size = packet_len();
-  size_t len = 0;
-  if (solo5_net_read(nic_index_, pckt->buf(), size, &len) == SOLO5_R_OK) {
-      // Adjust packet size to match received data
-      if (len) {
-        //INFO("Solo5Net", "Received pkt of len: %u", len);
-        pckt->set_data_end(len);
-        return net::Packet_ptr(pckt);
-      }
+  size_t size = packet_len();
+  if (solo5_net_read(nic_index_, pckt->buf(), size, &size) == 0) {
+    // Adjust packet size to match received data
+    if (size) {
+      pckt->set_data_end(size);
+      return net::Packet_ptr(pckt);
+    }
   }
   bufstore().release(buffer.addr);
   return nullptr;
