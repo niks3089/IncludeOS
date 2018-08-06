@@ -224,6 +224,7 @@ class ukvm(hypervisor):
         return ["--disk=" + filename]
 
     def net_arg(self):
+        #return ["--net=tap100"]
         return ["--nic=1"]
 
     def shm_arg(self):
