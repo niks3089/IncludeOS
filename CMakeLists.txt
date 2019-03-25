@@ -112,7 +112,7 @@ set(CAPABS "${CAPABS} -DNO_DEBUG=1 -DOS_TERMINATE_ON_CONTRACT_VIOLATION -D_GNU_S
 set(WARNS "-Wall -Wextra") # -Werror
 
 # configure options
-option(debug "Build with no optimizations" OFF)
+option(debug-all "Build with no optimizations" ON)
 option(minimal "Build for minimal size" OFF)
 option(stripped "reduce size" OFF)
 

@@ -21,6 +21,8 @@ set(SOURCES
   service.cpp
 )
 
+set(DEBUG ON)
+
 os_add_executable(demo "IncludeOS Demo Service" ${SOURCES})
 
 # DRIVERS / PLUGINS:

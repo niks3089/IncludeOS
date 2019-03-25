@@ -187,7 +187,7 @@ else()
   if ("${PLATFORM}" STREQUAL "x86_solo5")
     add_library(solo5 STATIC IMPORTED)
     set_target_properties(solo5 PROPERTIES LINKER_LANGUAGE C)
-    set_target_properties(solo5 PROPERTIES IMPORTED_LOCATION ${INCLUDEOS_PREFIX}/${ARCH}/lib/solo5_hvt.o)
+    set_target_properties(solo5 PROPERTIES IMPORTED_LOCATION ${INCLUDEOS_PREFIX}/${ARCH}/lib/solo5_spt.o)
   endif()
 
   if (${PLATFORM} STREQUAL x86_nano)
